@@ -1,8 +1,28 @@
-import sys
+
 import heapq
 import networkx as nx
 import matplotlib.pyplot as plt
 from time import time
+
+
+def create_graph():
+    G = nx.Graph()
+    #Adding Edges and weight
+    G.add_edge('a', 'b', weight=4)
+    G.add_edge('a', 'c', weight=2)
+    G.add_edge('b', 'c', weight=1)
+    G.add_edge('b', 'd', weight=5)
+    G.add_edge('c', 'd', weight=8)
+    G.add_edge('c', 'e', weight=10)
+    G.add_edge('e', 'd', weight=2)
+    G.add_edge('d', 'z', weight=6)
+    G.add_edge('e', 'z', weight=3)
+    pos = nx.spring_layout(G)  # positions for all nodes
+    nx.draw_networkx(G,pos,node_size=700)
+    labels = nx.get_edge_attributes(G,'weight')
+    nx.draw_networkx_edge_labels(G, pos, edge_labels=labels)
+    plt.show()  # display
+    return G
 
 
 def dijkstra(G_to_dict, source, target):
@@ -51,23 +71,21 @@ def traceback_path(target, parents):
     return path[::-1]   #Reverse Path is returned
 
 
-def bi_traceback_path(touch_node, parentsa, parentsb):
-    path = traceback_path(touch_node, parentsa)
-    touch_node = parentsb[touch_node]
+def bi_traceback_path(touch_node, parent_source, parent_target):
+    path = traceback_path(touch_node, parent_source)
+    touch_node = parent_target[touch_node]
 
     while touch_node:
         path.append(touch_node)
-        touch_node = parentsb[touch_node]
+        touch_node = parent_target[touch_node]
 
     return path
 
 def path_cost(graph, path):
     cost = 0.0
-
     for i in range(len(path) - 1):
         tail = path[i]
         head = path[i + 1]
-
         if not graph[tail][head]:
             raise Exception("Not a path.")
 
@@ -76,104 +94,81 @@ def path_cost(graph, path):
     return cost
 
 def bi_dijkstra(graph, source, target):
-    opena = [HeapEntry(source, 0.0)]
-    openb = [HeapEntry(target, 0.0)]
-    closeda = set()
-    closedb = set()
-    parentsa = dict()
-    parentsb = dict()
-    distancea = dict()
-    distanceb = dict()
-
+    start_source = [HeapEntry(source, 0.0)]
+    start_target = [HeapEntry(target, 0.0)]
+    end_source = set()
+    end_target = set()
+    parent_source = dict()
+    parent_target = dict()
+    dist_source = dict()
+    dist_target = dict()
     best_path_length = {'value': 1e9}
     touch_node = {'value': None}
-
-    parentsa[source] = None
-    parentsb[target] = None
-
-    distancea[source] = 0.0
-    distanceb[target] = 0.0
+    parent_source[source] = None
+    parent_target[target] = None
+    dist_source[source] = 0.0
+    dist_target[target] = 0.0
 
     def update_forward_frontier(node, node_score):
-        if node in closedb:
-            path_length = distanceb[node] + node_score
-
+        if node in end_target:
+            path_length = dist_target[node] + node_score
             if best_path_length['value'] > path_length:
                 best_path_length['value'] = path_length
                 touch_node['value'] = node
 
     def update_backward_frontier(node, node_score):
-        if node in closeda:
-            path_length = distancea[node] + node_score
+        if node in end_source:
+            path_length = dist_source[node] + node_score
 
             if best_path_length['value'] > path_length:
                 best_path_length['value'] = path_length
                 touch_node['value'] = node
 
     def expand_forward_frontier():
-        current = heapq.heappop(opena).node
-        closeda.add(current)
+        current = heapq.heappop(start_source).node
+        end_source.add(current)
 
-        for child in graph[current]:
-            if child in closeda:
+        for child_node in graph[current]:
+            if child_node in end_source:
                 continue
 
-            tentative_score = distancea[current] + graph[current][child]['weight']
+            tentative_score = dist_source[current] + graph[current][child_node]['weight']
 
-            if child not in distancea.keys() or tentative_score < distancea[child]:
-                distancea[child] = tentative_score
-                parentsa[child] = current
-                heapq.heappush(opena, HeapEntry(child, tentative_score))
-                update_forward_frontier(child, tentative_score)
+            if child_node not in dist_source.keys() or tentative_score < dist_source[child_node]:
+                dist_source[child_node] = tentative_score
+                parent_source[child_node] = current
+                heapq.heappush(start_source, HeapEntry(child_node, tentative_score))
+                update_forward_frontier(child_node, tentative_score)
 
     def expand_backward_frontier():
-        current = heapq.heappop(openb).node
-        closedb.add(current)
+        current = heapq.heappop(start_target).node
+        end_target.add(current)
 
         for parent in graph[current]:
-            if parent in closedb:
+            if parent in end_target:
                 continue
 
-            tentative_score = distanceb[current] + graph[parent][current]['weight']
+            tentative_score = dist_target[current] + graph[parent][current]['weight']
 
-            if parent not in distanceb.keys() or tentative_score < distanceb[parent]:
-                distanceb[parent] = tentative_score
-                parentsb[parent] = current
-                heapq.heappush(openb, HeapEntry(parent, tentative_score))
+            if parent not in dist_target.keys() or tentative_score < dist_target[parent]:
+                dist_target[parent] = tentative_score
+                parent_target[parent] = current
+                heapq.heappush(start_target, HeapEntry(parent, tentative_score))
                 update_backward_frontier(parent, tentative_score)
 
-    while opena and openb:
-        tmp = distancea[opena[0].node] + distanceb[openb[0].node]
+    while start_source and start_target:
+        tmp = dist_source[start_source[0].node] + dist_target[start_target[0].node]
 
         if tmp >= best_path_length['value']:
-            return bi_traceback_path(touch_node['value'], parentsa, parentsb)
+            return bi_traceback_path(touch_node['value'], parent_source, parent_target)
 
-        if len(opena) + len(closeda) < len(openb) + len(closedb):
+        if len(start_source) + len(end_source) < len(start_target) + len(end_target):
             expand_forward_frontier()
         else:
             expand_backward_frontier()
 
     return []
 
-
-def create_graph():
-    G = nx.Graph()
-    #Adding Edges and weight
-    G.add_edge('a', 'b', weight=4)
-    G.add_edge('a', 'c', weight=2)
-    G.add_edge('b', 'c', weight=1)
-    G.add_edge('b', 'd', weight=5)
-    G.add_edge('c', 'd', weight=8)
-    G.add_edge('c', 'e', weight=10)
-    G.add_edge('e', 'd', weight=2)
-    G.add_edge('d', 'z', weight=6)
-    G.add_edge('e', 'z', weight=3)
-    pos = nx.spring_layout(G)  # positions for all nodes
-    nx.draw_networkx(G,pos,node_size=700)
-    labels = nx.get_edge_attributes(G,'weight')
-    nx.draw_networkx_edge_labels(G, pos, edge_labels=labels)
-    plt.show()  # display
-    return G
 
 def main():
     start_time = time()
@@ -185,7 +180,7 @@ def main():
     print("Shortest Path is:",shortest_path)
     print("Shortest Distance is",distance )
     path = bi_dijkstra(G_to_dict, 'a', 'z')
-    cost = path_cost(G_to_dict, path)
+    cost =   path_cost(G_to_dict, path)
     print("Bi Directional",path,cost)
 
 
