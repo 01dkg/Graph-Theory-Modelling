@@ -1,4 +1,3 @@
-
 import heapq
 import networkx as nx
 import matplotlib.pyplot as plt
@@ -7,8 +6,7 @@ from time import time
 
 def create_graph():
     G = nx.Graph()
-    #Adding Edges and weight
-    G.add_edge('a', 'b', weight=4)
+    G.add_edge('a', 'b', weight=4)                                                              #Adding Edges and weight
     G.add_edge('a', 'c', weight=2)
     G.add_edge('b', 'c', weight=1)
     G.add_edge('b', 'd', weight=5)
@@ -17,11 +15,11 @@ def create_graph():
     G.add_edge('e', 'd', weight=2)
     G.add_edge('d', 'z', weight=6)
     G.add_edge('e', 'z', weight=3)
-    pos = nx.spring_layout(G)  # positions for all nodes
-    nx.draw_networkx(G,pos,node_size=700)
+    pos = nx.spring_layout(G)                                                                  # positions for all nodes
+    #nx.draw_networkx(G,pos,node_size=700)
     labels = nx.get_edge_attributes(G,'weight')
-    nx.draw_networkx_edge_labels(G, pos, edge_labels=labels)
-    plt.show()  # display
+    #nx.draw_networkx_edge_labels(G, pos, edge_labels=labels)
+    plt.show()                                                                                          # Display graph
     return G
 
 
@@ -52,137 +50,120 @@ def dijkstra(G_to_dict, source, target):
     # return the shortest_path in order source -> target, and it's cost
     return shortest_path[::-1], dist_cost[target]
 
-class HeapEntry:
-    def __init__(self, node, priority):
-        self.node = node
-        self.priority = priority
+class HeapQueue:
+    def __init__(self, vertex, priority_vertex):
+        self.vertex = vertex
+        self.priority_vertex = priority_vertex
 
     def __lt__(self, other):
-        return self.priority < other.priority
+        return self.priority_vertex < other.priority_vertex
 
 
-def traceback_path(target, parents):
-    path = []
-
-    while target:
-        path.append(target)
-        target = parents[target]
-
-    return path[::-1]   #Reverse Path is returned
+def reverse_path_traversal(target_node, parent_list):
+    path_list = []
+    while target_node:
+        path_list.append(target_node)
+        target_node = parent_list[target_node]
+    return path_list[::-1]                                                                     #Reverse Path is returned
 
 
-def bi_traceback_path(touch_node, parent_source, parent_target):
-    path = traceback_path(touch_node, parent_source)
-    touch_node = parent_target[touch_node]
+def bi_reverse_path_traversal(current_vertex, parent_source, parent_target):
+    path_list = reverse_path_traversal(current_vertex, parent_source)
 
-    while touch_node:
-        path.append(touch_node)
-        touch_node = parent_target[touch_node]
+    current_vertex = parent_target[current_vertex]
+    while current_vertex:
+        path_list.append(current_vertex)
+        current_vertex = parent_target[current_vertex]
+    return path_list
 
-    return path
-
-def path_cost(graph, path):
-    cost = 0.0
-    for i in range(len(path) - 1):
-        tail = path[i]
-        head = path[i + 1]
+def find_shortest_path_distance(graph, shortest_path):
+    shortest_distance = 0.0
+    for i in range(len(shortest_path) - 1):
+        tail = shortest_path[i]
+        head = shortest_path[i + 1]
         if not graph[tail][head]:
             raise Exception("Not a path.")
+    shortest_distance =shortest_distance+ graph[tail][head]['weight']
+    return shortest_distance
 
-        cost =cost+ graph[tail][head]['weight']
+def dijkstra_bidirectional(graph, S, T):
+    #S is Source T is Target
+    Initial_S = [HeapQueue(S, 0.0)]
+    Initial_T = [HeapQueue(T, 0.0)]
+    Goal_S = set()
+    Goal_T= set()
+    parent_S = {}
+    parent_T = {}
+    dist_S = {}
+    dist_T = {}
+    min_path_distance = {'value': 1e9}
+    current_vertex = {'value': None}
+    parent_S[S] = None
+    parent_T[T] = None
+    dist_S[S] = 0.0
+    dist_T[T] = 0.0
 
-    return cost
+    def update_queue(node, node_score,end):
+        if node in end:
+            path_length = dist_S[node] + node_score
+            if min_path_distance['value'] > path_length:
+                min_path_distance['value'] = path_length
+                current_vertex['value'] = node
 
-def bi_dijkstra(graph, source, target):
-    start_source = [HeapEntry(source, 0.0)]
-    start_target = [HeapEntry(target, 0.0)]
-    end_source = set()
-    end_target = set()
-    parent_source = dict()
-    parent_target = dict()
-    dist_source = dict()
-    dist_target = dict()
-    best_path_length = {'value': 1e9}
-    touch_node = {'value': None}
-    parent_source[source] = None
-    parent_target[target] = None
-    dist_source[source] = 0.0
-    dist_target[target] = 0.0
-
-    def update_forward_frontier(node, node_score):
-        if node in end_target:
-            path_length = dist_target[node] + node_score
-            if best_path_length['value'] > path_length:
-                best_path_length['value'] = path_length
-                touch_node['value'] = node
-
-    def update_backward_frontier(node, node_score):
-        if node in end_source:
-            path_length = dist_source[node] + node_score
-
-            if best_path_length['value'] > path_length:
-                best_path_length['value'] = path_length
-                touch_node['value'] = node
-
-    def expand_forward_frontier():
-        current = heapq.heappop(start_source).node
-        end_source.add(current)
-
-        for child_node in graph[current]:
-            if child_node in end_source:
+    def expandF():
+        pointer = heapq.heappop(Initial_S).vertex
+        Goal_S.add(pointer)
+        for pointer_node in graph[pointer]:
+            if pointer_node in Goal_S:
                 continue
+            temp_cost = dist_S[pointer] + graph[pointer][pointer_node]['weight']
+            if pointer_node not in dist_S.keys() or temp_cost < dist_S[pointer_node]:
+                dist_S[pointer_node] = temp_cost
+                parent_S[pointer_node] = pointer
+                heapq.heappush(Initial_S, HeapQueue(pointer_node, temp_cost))
+                update_queue(pointer_node, temp_cost, Goal_T)
 
-            tentative_score = dist_source[current] + graph[current][child_node]['weight']
-
-            if child_node not in dist_source.keys() or tentative_score < dist_source[child_node]:
-                dist_source[child_node] = tentative_score
-                parent_source[child_node] = current
-                heapq.heappush(start_source, HeapEntry(child_node, tentative_score))
-                update_forward_frontier(child_node, tentative_score)
-
-    def expand_backward_frontier():
-        current = heapq.heappop(start_target).node
-        end_target.add(current)
-
-        for parent in graph[current]:
-            if parent in end_target:
+    def expandB():
+        pointer = heapq.heappop(Initial_T).vertex
+        Goal_T.add(pointer)
+        for pointer_node in graph[pointer]:
+            if pointer_node in Goal_T:
                 continue
+            temp_cost = dist_T[pointer] + graph[pointer_node][pointer]['weight']
+            if pointer_node not in dist_T.keys() or temp_cost < dist_T[pointer_node]:
+                dist_T[pointer_node] = temp_cost
+                parent_T[pointer_node] = pointer
+                heapq.heappush(Initial_T, HeapQueue(pointer_node, temp_cost))
+                update_queue(pointer_node, temp_cost, Goal_S)
 
-            tentative_score = dist_target[current] + graph[parent][current]['weight']
+    def explore(Initial,Goal,):
+        pointer = heapq.heappop(Initial_T).vertex
+        Goal_T.add(pointer)
+        for pointer_node in graph[pointer]:
+            if pointer_node in Goal_T:
+                continue
+            temp_cost = dist_T[pointer] + graph[pointer_node][pointer]['weight']
+            if pointer_node not in dist_T.keys() or temp_cost < dist_T[pointer_node]:
+                dist_T[pointer_node] = temp_cost
+                parent_T[pointer_node] = pointer
+                heapq.heappush(Initial_T, HeapQueue(pointer_node, temp_cost))
+                update_queue(pointer_node, temp_cost, Goal_S)
 
-            if parent not in dist_target.keys() or tentative_score < dist_target[parent]:
-                dist_target[parent] = tentative_score
-                parent_target[parent] = current
-                heapq.heappush(start_target, HeapEntry(parent, tentative_score))
-                update_backward_frontier(parent, tentative_score)
-
-    while start_source and start_target:
-        tmp = dist_source[start_source[0].node] + dist_target[start_target[0].node]
-
-        if tmp >= best_path_length['value']:
-            return bi_traceback_path(touch_node['value'], parent_source, parent_target)
-
-        if len(start_source) + len(end_source) < len(start_target) + len(end_target):
-            expand_forward_frontier()
+    while Initial_S and Initial_T:                       #Stopping Condition for bi-directional dijkstra algorithm
+        if dist_S[Initial_S[0].vertex] + dist_T[Initial_T[0].vertex] >= min_path_distance['value']:
+            return bi_reverse_path_traversal(current_vertex['value'], parent_S, parent_T)
+        if len(Initial_S) + len(Goal_S) < len(Initial_T) + len(Goal_T):
+            expandF()
         else:
-            expand_backward_frontier()
-
+            expandB()
     return []
 
 
 def main():
-    start_time = time()
-    graph= create_graph()
-    G_to_dict = nx.to_dict_of_dicts(graph)
+    G_to_dict = nx.to_dict_of_dicts(create_graph())
     shortest_path, distance = dijkstra(G_to_dict, 'a', 'z')
-    end_time = time()
-    print("Bidirectional Dijkstra's algorithm in", 1000.0 * (end_time - start_time), "milliseconds.")
-    print("Shortest Path is:",shortest_path)
-    print("Shortest Distance is",distance )
-    path = bi_dijkstra(G_to_dict, 'a', 'z')
-    cost =   path_cost(G_to_dict, path)
-    print("Bi Directional",path,cost)
-
-
-if __name__ == '__main__':
-    main()
+    print("Shortest Path is:",shortest_path,distance)
+    shortest_path = dijkstra_bidirectional(G_to_dict, 'a', 'z')
+    shortest_path_distance =   find_shortest_path_distance(G_to_dict, shortest_path)
+    print("Bi Directional",shortest_path,shortest_path_distance)
+main()
