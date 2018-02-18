@@ -36,7 +36,7 @@ find the shortest path, as algorithm will start traversing from a source
 node (i.e. Dublin city) and stop when it reaches target node (i.e. Cork
 city)
 
-| \textbf{Iteration} 	| \textbf{Nodes} 	| \textbf{Edges} 	| \textbf{Source} 	| \textbf{Target} 	| \textbf{\begin{tabular}[c]{@{}c@{}}Dijkstra \\ run-time (in milliseconds)\end{tabular}} 	| \textbf{\begin{tabular}[c]{@{}c@{}}Bi-Directional Dijkstra\\  run-time (in milliseconds)\end{tabular}} 	|
+| Iteration 	| Nodes 	| Edges	| Source	| Target 	| Dijkstra run-time (in milliseconds) 	| Bi-Directional Dijkstra run-time (in milliseconds)} 	|
 |--------------------	|:--------------:	|:--------------:	|:---------------:	|:---------------:	|:---------------------------------------------------------------------------------------:	|:------------------------------------------------------------------------------------------------------:	|
 | 1                  	|        4       	|        3       	|        0        	|        3        	|                                       0.034383466                                       	|                                               0.025146117                                              	|
 | 2                  	|        5       	|        8       	|        0        	|        3        	|                                       0.059016397                                       	|                                               0.047726304                                              	|
