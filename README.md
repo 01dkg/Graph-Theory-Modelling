@@ -1,4 +1,4 @@
-#Implementation Notes for Dijkstra Alogrithm
+# Implementation Notes for Dijkstra Alogrithm
 
 **Dijkstra’s algorithm:** Dijkstra’s is shortest path algorithm, which
 follows greedy based approach to determine the shortest path from a
